@@ -5,3 +5,5 @@ Beaufort is a static site generator, using Scalate for rendering templates and m
 Layouts go under *_templates*, and blog posts under *_posts*
 
 TODO: How to use section!
+
+TODO: Make this actually work.
