@@ -1,0 +1,6 @@
+<% escapeMarkup = false %>
+<html>
+<body>
+  ${ content }
+</body>
+</html>
