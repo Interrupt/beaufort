@@ -1,4 +1,4 @@
-name := "scala jekyll"
+name := "beaufort"
 
 version := "0.1"
 
