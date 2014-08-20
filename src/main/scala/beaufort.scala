@@ -5,6 +5,7 @@ import eu.henkelmann.actuarius.ActuariusTransformer
 import org.yaml.snakeyaml.Yaml
 import java.util.LinkedHashMap
 import scala.collection.JavaConversions._
+import java.io.{File,FileInputStream,FileOutputStream}
 
 object slurp {
   def apply(file: java.io.File): String = {
@@ -18,11 +19,29 @@ object writer {
   }
 }
 
+object copy {
+  def apply(source: String, dest: String) = {
+    new FileOutputStream(new File(dest)) getChannel() transferFrom(
+        new FileInputStream(new File(source)) getChannel, 0, Long.MaxValue )
+  }
+}
+
+object makeDirs { def apply(directory: String) = { new File(directory).mkdirs(); } }
+
 class Post(file: java.io.File) {
   def apply(transformer: transformer): String = {
     val scalate = new TemplateEngine
     scalate.bindings = model.map{ case (k,v) => Binding(k, v.getClass.getName) }.toList ::: scalate.bindings
-    scalate.layout(transformer.getTemplates.head.getPath, model)
+
+    // extract the template to use from the model
+    val template = model.get("template") match {
+      case Some(file) => file
+      case _ => "default.ssp"
+    }
+
+    // get the template file and layout
+    val templateFile = transformer.getTemplates.filter( _.getName == template ).head
+    scalate.layout(templateFile.getPath, model)
   }
 
   lazy val contents: String = slurp(file)
@@ -56,11 +75,11 @@ class Post(file: java.io.File) {
 }
 
 // methods to find all the posts and templates that are needed
-class transformer(dir: String) {
+class transformer(sourceDir: String, outputDir: String) {
   def mapFilesInDir(file: java.io.File): Map[String, java.io.File] = { file.listFiles.map(f => f.getName -> f).toMap }
 
   lazy val specialDirectories =
-    new File(dir).listFiles.filter(_.isDirectory).filter(_.getName.startsWith("_")).map(t => t.getName -> t).toMap
+    new File(sourceDir).listFiles.filter(_.isDirectory).filter(_.getName.startsWith("_")).map(t => t.getName -> t).toMap
 
   def getPosts(): List[java.io.File] = { recursiveListFiles(specialDirectories.get("_posts").get).toList }
   def getTemplates(): List[java.io.File] = { recursiveListFiles(specialDirectories.get("_templates").get).toList }
@@ -70,6 +89,15 @@ class transformer(dir: String) {
     val files = dir.listFiles.filter(!_.isDirectory)
     files ++ dirs.flatMap(recursiveListFiles)
   }
+
+  def getOutputPath(file: File): String = {
+    (outputDir + file.getPath.substring(sourceDir.length, file.getPath.length)) replace ("_posts/", "")
+  }
+
+  def getOutputDir(file: File): String = {
+    val fullPath = getOutputPath(file)
+    fullPath.substring(0, fullPath.length - file.getName.length)
+  }
 }
 
 object Main { 
@@ -77,22 +105,34 @@ object Main {
     val sitepath = if(args.size > 0) args(0) else "testsite"
     val output = if(args.size > 1) args(1) else "output"
 
-    val t = new transformer(sitepath)
+    val t = new transformer(sitepath, output)
     val staticFiles = t.recursiveListFiles(new File(sitepath)).toList
 
     // render all of the posts
     t.getPosts().foreach {
-      f => val post = new Post(f)(t)
-      val path = output + f.getPath.substring(sitepath.length + 7, f.getPath.length)
-      val dir = path.substring(0, path.length - f.getName.length)
-      val newpath = path.replace(".md",".html")
+      f =>
+        val post = new Post(f)(t)
+        val outputPath = t.getOutputPath(f)
+        val outputDir = t.getOutputDir(f)
+        val newpath = outputPath.replace(".md",".html")
 
-      // make directories
-      new File(dir).mkdirs();
+        makeDirs(outputDir)
 
-      // render post
-      writer(newpath, post)
-      println("Wrote: " + newpath)
+        // render post
+        writer(newpath, post)
+        println("Transformed: " + newpath)
+    }
+
+    // copy other files as is to destination
+    staticFiles.foreach {
+      f =>
+        val outputPath = t.getOutputPath(f)
+        val outputDir = t.getOutputDir(f)
+
+        makeDirs(outputDir)
+
+        copy(f.getPath, outputPath)
+        println("Copied: " + outputPath)
     }
   }
 }

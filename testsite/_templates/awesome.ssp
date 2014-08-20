@@ -1,0 +1,10 @@
+<% escapeMarkup = false %>
+<html>
+<head>
+  <title>${ title }</title>
+</head>
+<body>
+  <h1>This is yet another layout</h1>
+  ${ content }
+</body>
+</html>
