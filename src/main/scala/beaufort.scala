@@ -102,8 +102,8 @@ class transformer(sourceDir: String, outputDir: String) {
 
 object Main { 
   def main(args: Array[String]) = {
-    val sitepath = if(args.size > 0) args(0) else "testsite"
-    val output = if(args.size > 1) args(1) else "output"
+    val sitepath = if(args.size > 0) args(0) else "site"
+    val output = if(args.size > 1) args(1) else "site_generated"
 
     val t = new transformer(sitepath, output)
     val staticFiles = t.recursiveListFiles(new File(sitepath)).toList
