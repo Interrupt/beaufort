@@ -3,6 +3,25 @@ import org.fusesource.scalate._
 import scala.io.Source
 import eu.henkelmann.actuarius.ActuariusTransformer
 
+object slurp {
+  def apply(file: java.io.File): String = {
+    io.Source.fromFile(file.getPath).mkString
+  }
+}
+
+
+class Post(file: java.io.File) {
+  def apply(transformer: transformer): String = {
+    val scalate = new TemplateEngine
+    scalate.bindings = model.map{ case (k,v) => Binding(k, v.getClass.getName) }.toList ::: scalate.bindings
+    scalate.layout(transformer.getTemplates.head.getPath, model)
+  }
+
+  lazy val model: Map[String, Any] = {
+    Map( "content" -> new ActuariusTransformer()(slurp(file)))
+  }
+}
+
 class transformer(dir: String) {
   def mapFilesInDir(file: java.io.File): Map[String, java.io.File] = { file.listFiles.map(f => f.getName -> f).toMap }
 
@@ -17,33 +36,17 @@ class transformer(dir: String) {
     val files = dir.listFiles.filter(!_.isDirectory)
     files ++ dirs.flatMap(recursiveListFiles)
   }
-
-  def render(file: java.io.File, model: Map[String, Any]): String = {
-    val scalate = new TemplateEngine
-    scalate.bindings = model.map{ case (k,v) => Binding(k, v.getClass.getName) }.toList ::: scalate.bindings
-    val source = TemplateSource.fromFile(file.getPath)
-    scalate.layout(source, model)
-  }
-
-  def getModelFromPost(post: java.io.File): Map[String, Any] = {
-    Map( "content" -> new ActuariusTransformer()(readFile(post)))
-  }
-
-  def renderPost(post: java.io.File, template: java.io.File): String = {
-    render(template, getModelFromPost(post))
-  }
-
-  def readFile(file: java.io.File): String = {
-    io.Source.fromFile(file.getPath).mkString
-  }
 }
 
 object Main { 
   def main(args: Array[String]) = {
-    val t = new transformer("testsite")
+    val sitepath = if(args.size > 0) args(0) else "testsite"
+    val t = new transformer(sitepath)
+
     println("Posts: " + t.getPosts)
     println("Templates: " + t.getTemplates)
     println("Files to copy: " + t.recursiveListFiles(new File("testsite")).toList)
-    println(t.renderPost(t.getPosts.head, t.getTemplates.head))
+
+    t.getPosts().foreach { f => new Post(f)(t) }
   }
 }
