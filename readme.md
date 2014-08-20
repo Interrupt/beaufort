@@ -4,6 +4,6 @@ Beaufort is a static site generator, using Scalate for rendering templates and m
 
 Layouts go under *_templates*, and blog posts under *_posts*
 
-TODO: How to use section!
+###Useage
 
-TODO: Make this actually work.
+`$ java -jar beaufort-assembly-0.1.jar` `source` `destination`
