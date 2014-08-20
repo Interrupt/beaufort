@@ -1,5 +1,5 @@
 title: Test Post
 ---
-# Hello World! #
+# Hello World #
 
 This is from a file

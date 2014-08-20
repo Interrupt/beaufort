@@ -12,6 +12,11 @@ object slurp {
   }
 }
 
+object writer {
+  def apply(filename: String, contents: String) = {
+    scala.tools.nsc.io.File(filename).writeAll(contents)
+  }
+}
 
 class Post(file: java.io.File) {
   def apply(transformer: transformer): String = {
@@ -66,12 +71,26 @@ class transformer(dir: String) {
 object Main { 
   def main(args: Array[String]) = {
     val sitepath = if(args.size > 0) args(0) else "testsite"
+    val output = if(args.size > 1) args(1) else "output"
+
     val t = new transformer(sitepath)
 
     println("Posts: " + t.getPosts)
     println("Templates: " + t.getTemplates)
     println("Files to copy: " + t.recursiveListFiles(new File("testsite")).toList)
 
-    t.getPosts().foreach { f => println(new Post(f)(t)) }
+    t.getPosts().foreach {
+      f => val post = new Post(f)(t)
+      val path = output + f.getPath.substring(sitepath.length + 7, f.getPath.length)
+      val dir = path.substring(0, path.length - f.getName.length)
+      val newpath = path.replace(".md",".html")
+
+      // make directories
+      new File(dir).mkdirs();
+
+      // template post
+      writer(newpath, post)
+      println("Wrote: " + newpath)
+    }
   }
 }
