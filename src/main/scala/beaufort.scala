@@ -31,6 +31,7 @@ object makeDirs { def apply(directory: String) = { new File(directory).mkdirs();
 class Post(file: java.io.File) {
   def apply(transformer: transformer): String = {
     val scalate = new TemplateEngine
+    scalate.escapeMarkup = false
     scalate.bindings = model.map{ case (k,v) => Binding(k, v.getClass.getName) }.toList ::: scalate.bindings
 
     // extract the template to use from the model
