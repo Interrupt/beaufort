@@ -27,6 +27,7 @@ class Post(file: java.io.File) {
 
   lazy val contents: String = slurp(file)
 
+  // get the post body contents
   lazy val body: String = {
     val index = headerIndex
     if(index != -1)
@@ -35,6 +36,7 @@ class Post(file: java.io.File) {
       contents
   }
 
+  // get the yaml header section
   lazy val header: String = {
     val index = headerIndex
     if(index != -1)
@@ -45,6 +47,7 @@ class Post(file: java.io.File) {
 
   lazy val headerIndex = { contents.indexOf("---") }
 
+  // make the model that will be used to render this post
   lazy val model: Map[String, Any] = {
     val loadedYaml = (new Yaml().load(header)).asInstanceOf[LinkedHashMap[String,Any]]
     val properties: scala.collection.mutable.Map[String, Any] = if(loadedYaml != null) loadedYaml else new LinkedHashMap[String, Any]()
@@ -52,6 +55,7 @@ class Post(file: java.io.File) {
   }
 }
 
+// methods to find all the posts and templates that are needed
 class transformer(dir: String) {
   def mapFilesInDir(file: java.io.File): Map[String, java.io.File] = { file.listFiles.map(f => f.getName -> f).toMap }
 
@@ -74,11 +78,9 @@ object Main {
     val output = if(args.size > 1) args(1) else "output"
 
     val t = new transformer(sitepath)
+    val staticFiles = t.recursiveListFiles(new File(sitepath)).toList
 
-    println("Posts: " + t.getPosts)
-    println("Templates: " + t.getTemplates)
-    println("Files to copy: " + t.recursiveListFiles(new File("testsite")).toList)
-
+    // render all of the posts
     t.getPosts().foreach {
       f => val post = new Post(f)(t)
       val path = output + f.getPath.substring(sitepath.length + 7, f.getPath.length)
@@ -88,7 +90,7 @@ object Main {
       // make directories
       new File(dir).mkdirs();
 
-      // template post
+      // render post
       writer(newpath, post)
       println("Wrote: " + newpath)
     }
