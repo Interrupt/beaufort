@@ -2,6 +2,9 @@ import java.io.File
 import org.fusesource.scalate._
 import scala.io.Source
 import eu.henkelmann.actuarius.ActuariusTransformer
+import org.yaml.snakeyaml.Yaml
+import java.util.LinkedHashMap
+import scala.collection.JavaConversions._
 
 object slurp {
   def apply(file: java.io.File): String = {
@@ -17,8 +20,30 @@ class Post(file: java.io.File) {
     scalate.layout(transformer.getTemplates.head.getPath, model)
   }
 
+  lazy val contents: String = slurp(file)
+
+  lazy val body: String = {
+    val index = headerIndex
+    if(index != -1)
+      contents.substring(index + 3)
+    else
+      contents
+  }
+
+  lazy val header: String = {
+    val index = headerIndex
+    if(index != -1)
+      contents.take(index)
+    else
+      ""
+  }
+
+  lazy val headerIndex = { contents.indexOf("---") }
+
   lazy val model: Map[String, Any] = {
-    Map( "content" -> new ActuariusTransformer()(slurp(file)))
+    val loadedYaml = (new Yaml().load(header)).asInstanceOf[LinkedHashMap[String,Any]]
+    val properties: scala.collection.mutable.Map[String, Any] = if(loadedYaml != null) loadedYaml else new LinkedHashMap[String, Any]()
+    Map( "content" -> new ActuariusTransformer()(body)) ++ properties
   }
 }
 
@@ -47,6 +72,6 @@ object Main {
     println("Templates: " + t.getTemplates)
     println("Files to copy: " + t.recursiveListFiles(new File("testsite")).toList)
 
-    t.getPosts().foreach { f => new Post(f)(t) }
+    t.getPosts().foreach { f => println(new Post(f)(t)) }
   }
 }
